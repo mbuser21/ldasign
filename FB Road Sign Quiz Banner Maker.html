@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="bn"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FB Road Sign Quiz Banner Maker</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;800&family=Montserrat:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f4f6;--card:#fff;--tx:#1a1a1a;--mu:#666;--bd:#ddd;--ac:#e10600;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121214;--card:#1c1c20;--tx:#eee;--mu:#999;--bd:#333}}
+:root[data-theme="dark"]{--bg:#121214;--card:#1c1c20;--tx:#eee;--mu:#999;--bd:#333}
+*{box-sizing:inherit}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 "Noto Sans Bengali",system-ui,sans-serif}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:20px;max-width:1200px;margin:0 auto;padding:20px}
+@media(max-width:860px){.wrap{grid-template-columns:1fr}}
+.prev{position:sticky;top:12px;align-self:start}
+canvas{width:100%;height:auto;display:block;border-radius:10px;box-shadow:0 4px 20px #0003;background:#fff}
+.panel{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px}
+h1{font-size:18px;margin:0 0 12px}h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin:16px 0 8px}
+label{display:block;font-size:13px;color:var(--mu);margin:8px 0 3px}
+input[type=text]{width:100%;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+input[type=file]{width:100%;font-size:13px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.chk{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--tx)}
+.chk input{width:auto}
+button{padding:10px 14px;border:0;border-radius:8px;background:var(--ac);color:#fff;font:600 15px inherit;font-family:inherit;cursor:pointer;width:100%;margin-top:14px}
+button.sec{background:var(--bd);color:var(--tx);margin-top:8px}
+</style></head><body>
+<div class="wrap">
+<div class="prev"><canvas id="c" width="1254" height="1254"></canvas></div>
+<div class="panel">
+<h1>🚦 Road Sign Quiz Banner Maker</h1>
+<h2>Images</h2>
+<label>Logo (PNG/JPG/SVG) — default is a text logo</label><input type="file" id="logo" accept="image/*">
+<label>Sign image — default is the No-Overtaking sign</label><input type="file" id="sign" accept="image/*">
+<label class="chk"><input type="checkbox" id="pole" checked> Show pole under sign</label>
+<label class="chk"><input type="checkbox" id="ring" checked> Draw round frame around uploaded sign</label>
+<h2>Bengali font</h2>
+<label>Font name (installed on your device)</label><input type="text" id="bfname" value="Kalpurush">
+<label>Or upload font file (.ttf/.otf/.woff) — works on any device</label><input type="file" id="bfont" accept=".ttf,.otf,.woff,.woff2">
+<h2>Header</h2>
+<div class="row"><div><label>Series label</label><input type="text" id="series" value="LDA ROAD SIGN"></div>
+<div><label>Number</label><input type="text" id="num" value="#04"></div></div>
+<h2>Question</h2>
+<label>Line 1 (black)</label><input type="text" id="t1" value="এই সাইনটির">
+<label>Line 2 (red)</label><input type="text" id="t2" value="অর্থ কী?">
+<label>Call to action</label><input type="text" id="cta" value="কমেন্টে আপনার উত্তর লিখুন!">
+<h2>Options</h2>
+<label>A</label><input type="text" id="oA" value="সামনে ওভারটেকিং নিষেধ">
+<label>B</label><input type="text" id="oB" value="দুই গাড়ি পাশাপাশি চলতে নিষেধ">
+<label>C</label><input type="text" id="oC" value="সামনে গাড়ি পার্কিং নিষেধ">
+<label>D</label><input type="text" id="oD" value="সামনে গতি সীমা">
+<h2>Footer</h2>
+<label>Tagline line 1</label><input type="text" id="f1" value="নিরাপদ ড্রাইভিং">
+<label>Tagline line 2</label><input type="text" id="f2" value="নিরাপদ বাংলাদেশ">
+<div class="row"><div><label>Brand name (default logo)</label><input type="text" id="bn" value="LONDON"></div>
+<div><label>Sub-name</label><input type="text" id="bs" value="DRIVING ACADEMY"></div></div>
+<button id="dl">⬇ Download PNG (1254×1254)</button>
+<button class="sec" id="dl2">⬇ Download JPG</button>
+</div></div>
+<script>
+const $=id=>document.getElementById(id),cv=$('c'),x=cv.getContext('2d'),RED='#e60012';
+const img={logo:null,sign:null};
+let BN='"Kalpurush","Noto Sans Bengali",sans-serif',upFont=false;
+$('bfont').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;
+  try{const ff=new FontFace('BnUpload',await f.arrayBuffer());await ff.load();document.fonts.add(ff);upFont=true;draw()}catch(err){alert('Could not load this font file')}});
+['logo','sign'].forEach(k=>$(k).addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f){img[k]=null;draw();return}
+  const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{img[k]=i;draw()};i.src=r.result};r.readAsDataURL(f)}));
+document.querySelectorAll('input[type=text],input[type=checkbox]').forEach(i=>i.addEventListener('input',draw));
+const rr=(a,b,w,h,r,fill)=>{x.beginPath();x.roundRect(a,b,w,h,r);x.fillStyle=fill;x.fill()};
+const T=(s,a,b,font,col,al='left',max)=>{let px=+font.match(/(\d+)px/)[1],f=font;
+  x.font=f;x.fillStyle=col;x.textAlign=al;
+  if(max){while(x.measureText(s).width>max&&px>12){px--;f=font.replace(/\d+px/,px+'px');x.font=f}}
+  x.fillText(s,a,b)};
+function contain(i,bx,by,bw,bh){const s=Math.min(bw/i.width,bh/i.height),w=i.width*s,h=i.height*s;x.drawImage(i,bx+(bw-w)/2,by+(bh-h)/2,w,h)}
+function car(a,b){x.fillStyle='#111';x.beginPath();
+  x.moveTo(a+22,b+42);x.lineTo(a+34,b+10);x.quadraticCurveTo(a+38,b+2,a+48,b+1);x.lineTo(a+82,b+1);
+  x.quadraticCurveTo(a+92,b+2,a+96,b+10);x.lineTo(a+108,b+42);x.quadraticCurveTo(a+130,b+46,a+130,b+62);
+  x.lineTo(a+130,b+82);x.quadraticCurveTo(a+130,b+92,a+120,b+92);x.lineTo(a+10,b+92);x.quadraticCurveTo(a,b+92,a,b+82);
+  x.lineTo(a,b+62);x.quadraticCurveTo(a,b+46,a+22,b+42);x.fill();
+  x.fillStyle='#fff';x.beginPath();x.moveTo(a+36,b+38);x.lineTo(a+44,b+14);x.lineTo(a+86,b+14);x.lineTo(a+94,b+38);x.fill();
+  x.fillStyle='#111';x.fillRect(a+62,b+14,6,24);
+  x.fillStyle='#fff';[a+17,a+113].forEach(c=>{x.beginPath();x.arc(c,b+62,8,0,7);x.fill()})}
+function defSign(){const cx=329,cy=447;
+  x.save();x.shadowColor='#0003';x.shadowBlur=14;x.fillStyle='#fff';x.beginPath();x.arc(cx,cy,220,0,7);x.fill();x.restore();
+  x.fillStyle=RED;x.beginPath();x.arc(cx,cy,212,0,7);x.fill();x.fillStyle='#fff';x.beginPath();x.arc(cx,cy,165,0,7);x.fill();
+  car(185,405);car(346,405)}
+function defLogo(){x.save();x.translate(70,50);
+  x.fillStyle='#111';x.beginPath();x.moveTo(0,95);x.lineTo(180,95);x.lineTo(150,120);x.lineTo(30,120);x.fill();
+  x.strokeStyle=RED;x.lineWidth=10;x.beginPath();x.ellipse(90,45,85,38,0,Math.PI,0);x.stroke();
+  x.fillStyle='#111';x.beginPath();x.arc(90,38,28,0,7);x.fill();x.fillStyle='#fff';x.font='700 16px Montserrat';x.textAlign='center';x.fillText('LDA',90,44);
+  x.setTransform(1,0,-.2,1,0,0);x.restore();
+  x.save();x.transform(1,0,-.2,1,0,0);T($('bn').value,92+.2*100,98,'800 40px Montserrat',RED,'center',170);x.restore();
+  T($('bs').value,160,138,'600 12px Montserrat','#fff','center',140);}
+function draw(){
+  BN=(upFont?'"BnUpload",':'')+'"'+($('bfname').value.trim()||'Kalpurush')+'","Noto Sans Bengali",sans-serif';
+  x.clearRect(0,0,1254,1254);x.fillStyle='#fafafa';x.fillRect(0,0,1254,1254);
+  // road swoosh
+  x.save();x.strokeStyle='#e4e4e6';x.lineWidth=2;x.fillStyle='#efefF0';x.beginPath();
+  x.moveTo(640,1175);x.quadraticCurveTo(900,1050,1254,1012);x.lineTo(1254,1175);x.fill();
+  x.strokeStyle='#fff';x.lineWidth=5;x.setLineDash([40,30]);x.beginPath();x.moveTo(930,1175);x.quadraticCurveTo(1060,1060,1254,1030);x.stroke();x.restore();
+  // logo
+  if(img.logo)contain(img.logo,60,38,200,130);else defLogo();
+  // header
+  x.save();x.letterSpacing='2px';T($('series').value.toUpperCase(),882,88,'800 28px Montserrat','#111','left',230);x.restore();
+  const g=x.createLinearGradient(882,0,1185,0);g.addColorStop(0,'#111');g.addColorStop(.5,'#111');g.addColorStop(.5,RED);g.addColorStop(1,RED);
+  rr(882,104,303,5,3,g);
+  rr(1124,58,77,38,10,RED);T($('num').value,1162,87,'800 28px Montserrat','#fff','center',66);
+  // pole
+  if($('pole').checked){const p=x.createLinearGradient(305,0,350,0);p.addColorStop(0,'#999');p.addColorStop(.4,'#e8e8e8');p.addColorStop(1,'#888');
+    x.fillStyle=p;x.fillRect(305,640,45,380);
+    const s=x.createRadialGradient(328,1025,5,328,1025,70);s.addColorStop(0,'#0002');s.addColorStop(1,'#0000');x.fillStyle=s;x.fillRect(240,990,180,70)}
+  // sign
+  if(img.sign){if($('ring').checked){x.save();x.shadowColor='#0003';x.shadowBlur=14;x.fillStyle='#fff';x.beginPath();x.arc(329,447,220,0,7);x.fill();x.restore();
+      x.save();x.beginPath();x.arc(329,447,212,0,7);x.clip();const s=Math.max(424/img.sign.width,424/img.sign.height);
+      x.drawImage(img.sign,329-img.sign.width*s/2,447-img.sign.height*s/2,img.sign.width*s,img.sign.height*s);x.restore()}
+    else contain(img.sign,109,227,440,440)}
+  else defSign();
+  // question
+  T($('t1').value,632,288,'800 88px '+BN,'#0d0d0d','left',560);
+  T($('t2').value,632,466,'800 148px '+BN,RED,'left',560);
+  // cta
+  x.fillStyle=RED;x.beginPath();x.roundRect(643,497,62,50,10);x.fill();x.beginPath();x.moveTo(654,545);x.lineTo(654,562);x.lineTo(676,545);x.fill();
+  x.fillStyle='#fff';[512,522,532].forEach((y,i)=>x.fillRect(658,y,i==2?20:30,4));
+  T($('cta').value,724,538,'400 37px '+BN,'#111','left',470);
+  // options
+  ['A','B','C','D'].forEach((L,i)=>{const y=592+i*108.5;
+    x.save();x.shadowColor='#0002';x.shadowBlur=6;x.shadowOffsetY=2;rr(634,y,555,86,43,'#efeff0');x.restore();
+    x.fillStyle=RED;x.beginPath();x.arc(682,y+43,40,0,7);x.fill();
+    T(L,682,y+58,'800 42px Montserrat','#fff','center');
+    T($('o'+L).value,754,y+57,'400 32px '+BN,'#111','left',420)});
+  // footer tagline
+  x.fillStyle=RED;x.fillRect(73,1052,4,56);
+  T($('f1').value,98,1072,'400 22px '+BN,'#111','left',300);
+  T($('f2').value,98,1098,'600 22px '+BN,'#111','left',300);
+  // bottom bar
+  x.fillStyle='#222';x.fillRect(0,1175,1254,79);
+  x.fillStyle=RED;x.beginPath();x.moveTo(0,1175);x.lineTo(425,1175);x.lineTo(358,1254);x.lineTo(0,1254);x.fill();
+  x.save();x.letterSpacing='2px';T('WWW.LDA.BD',1190,1223,'800 24px Montserrat','#fff','right');x.restore();
+}
+function dl(type,ext){cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download=`road-sign-${$('num').value.replace('#','')||'post'}.${ext}`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)},type,.95)}
+$('dl').onclick=()=>dl('image/png','png');$('dl2').onclick=()=>dl('image/jpeg','jpg');
+draw();
+Promise.all(['800 40px "Noto Sans Bengali"','400 30px "Noto Sans Bengali"','600 22px "Noto Sans Bengali"','800 28px Montserrat','600 20px Montserrat'].map(f=>document.fonts.load(f,'অআ A'))).then(draw);
+document.fonts.ready.then(draw);
+</script></body></html>
